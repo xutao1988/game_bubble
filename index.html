@@ -831,7 +831,7 @@ preloadImages();
 // ===== Speech Debug Panel =====
 (function(){
   const btn = document.createElement('button');
-  btn.id = 'debugToggle'; btn.textContent = 'DBG v7';
+  btn.id = 'debugToggle'; btn.textContent = 'DBG v8';
   document.body.appendChild(btn);
   const panel = document.createElement('div');
   panel.id = 'debugPanel';
@@ -868,10 +868,40 @@ preloadImages();
       }
       dlog('userAgent: ' + navigator.userAgent.substring(0, 120));
       dlog('soundOn: ' + S.soundOn);
-      // Test speak button
-      dlog('--- Tap a surprise bubble to test ---');
+      dlog('--- Tap TEST buttons or a surprise bubble ---');
     }
   });
+
+  // Direct test buttons (click event, same as animal-game)
+  function makeTestBtn(label, text, lang){
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'font-size:3vmin;padding:1.5vmin 3vmin;margin:1vmin;border:none;border-radius:1vmin;background:#2196F3;color:#fff;pointer-events:auto';
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dlog('TEST "' + text + '" lang=' + lang);
+      if(!window.speechSynthesis){ dlog('no speechSynthesis!'); return; }
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang; u.rate = 0.8; u.pitch = 1.1;
+      const voices = window.speechSynthesis.getVoices();
+      const v = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+      dlog('voice: ' + (v ? v.name + ' ' + v.lang : 'NONE'));
+      if(v) u.voice = v;
+      u.onstart = () => dlog('TEST onstart');
+      u.onend = () => dlog('TEST onend');
+      u.onerror = (ev) => dlog('TEST onerror: ' + ev.error);
+      window.speechSynthesis.speak(u);
+      dlog('TEST speak() speaking=' + window.speechSynthesis.speaking);
+    });
+    return b;
+  }
+  const testRow = document.createElement('div');
+  testRow.style.cssText = 'position:fixed;bottom:6vmin;right:1vmin;z-index:10001;display:flex;flex-wrap:wrap;gap:1vmin';
+  testRow.appendChild(makeTestBtn('EN:Dog', 'Dog', 'en-US'));
+  testRow.appendChild(makeTestBtn('ZH:大饼', '大饼', 'zh-CN'));
+  testRow.appendChild(makeTestBtn('EN:Hello', 'Hello', 'en-US'));
+  document.body.appendChild(testRow);
   // Patch speakSurprise to add logging (uses same pattern as animal-game.html)
   const origSpeak = window.speakSurprise;
   window.speakSurprise = function(surprise){

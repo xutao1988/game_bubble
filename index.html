@@ -142,6 +142,46 @@ const ANIMALS = ['🐶','🐱','🐰','🐻','🐼','🦊','🐸','🐵','🐷',
 const STARS = ['⭐','🌟','✨','💫','🌈'];
 const ENCOURAGEMENTS = ['哇！','好棒！','嘻嘻','太厉害了！','漂亮！','真棒！','厉害！'];
 
+// ===== Cartoon Character SVG Avatars =====
+function svgUri(s){ return 'data:image/svg+xml,' + encodeURIComponent(s); }
+const _hd = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">';
+// 舒克 - 蓝色飞行帽小老鼠
+const SVG_SHUKE = svgUri(_hd+'<circle cx="100" cy="100" r="99" fill="#E3F2FD"/><circle cx="48" cy="52" r="30" fill="#BDBDBD"/><circle cx="48" cy="52" r="17" fill="#F8BBD0"/><circle cx="152" cy="52" r="30" fill="#BDBDBD"/><circle cx="152" cy="52" r="17" fill="#F8BBD0"/><circle cx="100" cy="110" r="56" fill="#E0E0E0"/><ellipse cx="100" cy="58" rx="42" ry="18" fill="#1E88E5"/><circle cx="100" cy="46" r="6" fill="#FDD835"/><circle cx="82" cy="100" r="8" fill="#333"/><circle cx="82" cy="97" r="3" fill="#fff"/><circle cx="118" cy="100" r="8" fill="#333"/><circle cx="118" cy="97" r="3" fill="#fff"/><ellipse cx="100" cy="120" rx="5" ry="4" fill="#F48FB1"/><path d="M88 132Q100 144 112 132" fill="none" stroke="#888" stroke-width="2.5" stroke-linecap="round"/><text x="100" y="185" text-anchor="middle" font-size="18" fill="#1E88E5" font-weight="bold" font-family="sans-serif">舒克</text></svg>');
+// 贝塔 - 红色头巾小老鼠
+const SVG_BEITA = svgUri(_hd+'<circle cx="100" cy="100" r="99" fill="#FFF3E0"/><circle cx="48" cy="52" r="30" fill="#BDBDBD"/><circle cx="48" cy="52" r="17" fill="#F8BBD0"/><circle cx="152" cy="52" r="30" fill="#BDBDBD"/><circle cx="152" cy="52" r="17" fill="#F8BBD0"/><circle cx="100" cy="110" r="56" fill="#E0E0E0"/><ellipse cx="100" cy="58" rx="42" ry="18" fill="#E53935"/><polygon points="60,52 100,32 140,52" fill="#C62828"/><circle cx="82" cy="100" r="8" fill="#333"/><circle cx="82" cy="97" r="3" fill="#fff"/><circle cx="118" cy="100" r="8" fill="#333"/><circle cx="118" cy="97" r="3" fill="#fff"/><ellipse cx="100" cy="120" rx="5" ry="4" fill="#F48FB1"/><path d="M88 132Q100 144 112 132" fill="none" stroke="#888" stroke-width="2.5" stroke-linecap="round"/><text x="100" y="185" text-anchor="middle" font-size="18" fill="#E53935" font-weight="bold" font-family="sans-serif">贝塔</text></svg>');
+// 小猪佩奇 - 粉红猪
+const SVG_PEPPA = svgUri(_hd+'<circle cx="100" cy="100" r="99" fill="#FCE4EC"/><circle cx="70" cy="42" r="14" fill="#F48FB1"/><circle cx="130" cy="42" r="14" fill="#F48FB1"/><circle cx="100" cy="105" r="58" fill="#F8BBD0"/><ellipse cx="100" cy="90" rx="20" ry="16" fill="#F48FB1"/><circle cx="93" cy="88" r="3" fill="#D81B60"/><circle cx="107" cy="88" r="3" fill="#D81B60"/><circle cx="78" cy="95" r="8" fill="#333"/><circle cx="78" cy="92" r="3" fill="#fff"/><circle cx="122" cy="95" r="8" fill="#333"/><circle cx="122" cy="92" r="3" fill="#fff"/><circle cx="68" cy="115" r="10" fill="#FF8A80"/><circle cx="132" cy="115" r="10" fill="#FF8A80"/><path d="M85 125Q100 138 115 125" fill="none" stroke="#C2185B" stroke-width="2.5" stroke-linecap="round"/><text x="100" y="185" text-anchor="middle" font-size="16" fill="#E91E63" font-weight="bold" font-family="sans-serif">佩奇</text></svg>');
+// 葫芦娃 - 7兄弟，不同颜色的葫芦帽
+function makeHuluwa(color, darkColor, name) {
+  return svgUri(_hd+'<circle cx="100" cy="100" r="99" fill="#FFFDE7"/>'
+  +'<circle cx="100" cy="112" r="55" fill="#FFCC80"/>'
+  +'<path d="M58 72Q100 8 142 72" fill="'+color+'"/>'
+  +'<ellipse cx="100" cy="70" rx="32" ry="24" fill="'+color+'"/>'
+  +'<ellipse cx="100" cy="52" rx="20" ry="14" fill="'+darkColor+'"/>'
+  +'<path d="M96 38Q100 18 104 38" fill="#4CAF50" stroke="#388E3C" stroke-width="2"/>'
+  +'<circle cx="82" cy="102" r="8" fill="#333"/><circle cx="82" cy="99" r="3" fill="#fff"/>'
+  +'<circle cx="118" cy="102" r="8" fill="#333"/><circle cx="118" cy="99" r="3" fill="#fff"/>'
+  +'<path d="M92 128Q100 138 108 128" fill="none" stroke="#888" stroke-width="2.5" stroke-linecap="round"/>'
+  +'<circle cx="70" cy="118" r="8" fill="#FFAB91" opacity=".6"/>'
+  +'<circle cx="130" cy="118" r="8" fill="#FFAB91" opacity=".6"/>'
+  +'<text x="100" y="185" text-anchor="middle" font-size="16" fill="'+darkColor+'" font-weight="bold" font-family="sans-serif">'+name+'</text></svg>');
+}
+const SVG_HULUWA = [
+  makeHuluwa('#F44336','#C62828','大娃'),
+  makeHuluwa('#FF9800','#E65100','二娃'),
+  makeHuluwa('#FFEB3B','#F57F17','三娃'),
+  makeHuluwa('#4CAF50','#1B5E20','四娃'),
+  makeHuluwa('#00BCD4','#006064','五娃'),
+  makeHuluwa('#3F51B5','#1A237E','六娃'),
+  makeHuluwa('#9C27B0','#4A148C','七娃'),
+];
+const CARTOON_CHARS = [
+  { name:'舒克', src: SVG_SHUKE },
+  { name:'贝塔', src: SVG_BEITA },
+  { name:'佩奇', src: SVG_PEPPA },
+  ...SVG_HULUWA.map((src,i) => ({ name:['大娃','二娃','三娃','四娃','五娃','六娃','七娃'][i], src })),
+];
+
 const NOTE_FREQ = { C5:523.25, D5:587.33, E5:659.25, G5:783.99, A5:880.00, C6:1046.50 };
 const MELODY = [
   [NOTE_FREQ.C5,1],[NOTE_FREQ.E5,1],[NOTE_FREQ.G5,1.5],[NOTE_FREQ.A5,.5],
@@ -315,10 +355,11 @@ function maybeEncourage(){
 function pickSurprise(cfg){
   if(Math.random() > cfg.surpriseRate) return null;
   const r = Math.random();
-  if(r < .25) return { type:'dabing', src: IMAGES.dabing };
-  if(r < .45) return { type:'baba',   src: IMAGES.baba };
-  if(r < .65) return { type:'mama',   src: IMAGES.mama };
-  if(r < .85) return { type:'animal', emoji: pick(ANIMALS) };
+  if(r < .18) return { type:'dabing', src: IMAGES.dabing };
+  if(r < .30) return { type:'baba',   src: IMAGES.baba };
+  if(r < .42) return { type:'mama',   src: IMAGES.mama };
+  if(r < .75) { const c = pick(CARTOON_CHARS); return { type:'cartoon', src: c.src, name: c.name }; }
+  if(r < .90) return { type:'animal', emoji: pick(ANIMALS) };
   return { type:'star', emoji: pick(STARS) };
 }
 

@@ -42,6 +42,8 @@ html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webk
 .bubble-content{width:55%;height:55%;border-radius:50%;overflow:hidden;z-index:1;display:flex;align-items:center;justify-content:center}
 .bubble-content img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .bubble-emoji{font-size:12vmin;line-height:1}
+.bubble-greeting{flex-direction:column;gap:.3vmin;width:75%;height:75%}
+.bubble-greeting-text{font-size:2.8vmin;font-weight:700;color:#fff;text-shadow:0 .2vmin .4vmin rgba(0,0,0,.3);text-align:center;line-height:1.1;word-spacing:100vw}
 
 /* Surprise shimmer */
 .bubble.surprise .bubble-inner::after{content:'';position:absolute;inset:0;border-radius:50%;border:.4vmin solid rgba(255,255,255,.5);animation:shimmer 2s linear infinite;pointer-events:none;z-index:3}
@@ -123,9 +125,9 @@ html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webk
 
 // ===== Configuration =====
 const DIFFICULTY = {
-  baby:      { maxBubbles: 10, spawnMs: 600,  speedVmin: 1.8, minSize: 18, maxSize: 40, surpriseRate: .45 },
-  toddler:   { maxBubbles: 14, spawnMs: 400,  speedVmin: 2.8, minSize: 14, maxSize: 34, surpriseRate: .35 },
-  challenge: { maxBubbles: 18, spawnMs: 280,  speedVmin: 4.0, minSize: 10, maxSize: 28, surpriseRate: .25 },
+  baby:      { maxBubbles: 10, spawnMs: 600,  speedVmin: 1.8, minSize: 18, maxSize: 40, surpriseRate: .75 },
+  toddler:   { maxBubbles: 14, spawnMs: 400,  speedVmin: 2.8, minSize: 14, maxSize: 34, surpriseRate: .60 },
+  challenge: { maxBubbles: 18, spawnMs: 280,  speedVmin: 4.0, minSize: 10, maxSize: 28, surpriseRate: .50 },
 };
 
 const BUBBLE_COLORS = [
@@ -140,6 +142,16 @@ const BUBBLE_COLORS = [
 
 const ANIMALS = ['🐶','🐱','🐰','🐻','🐼','🦊','🐸','🐵','🐷','🦋','🐠','🐙','🐢','🐘','🦁'];
 const STARS = ['⭐','🌟','✨','💫','🌈'];
+const NUMBERS = [
+  {display:'1️⃣', word:'One'},{display:'2️⃣', word:'Two'},{display:'3️⃣', word:'Three'},
+  {display:'4️⃣', word:'Four'},{display:'5️⃣', word:'Five'},{display:'6️⃣', word:'Six'},
+  {display:'7️⃣', word:'Seven'},{display:'8️⃣', word:'Eight'},{display:'9️⃣', word:'Nine'},
+  {display:'🔟', word:'Ten'},
+];
+const GREETINGS = [
+  {display:'🌅', text:'Good Morning'},{display:'☀️', text:'Good Afternoon'},
+  {display:'🌇', text:'Good Evening'},{display:'🌙', text:'Good Night'},
+];
 const EMOJI_WORDS = {
   '🐶':'Dog','🐱':'Cat','🐰':'Rabbit','🐻':'Bear','🐼':'Panda',
   '🦊':'Fox','🐸':'Frog','🐵':'Monkey','🐷':'Pig','🦋':'Butterfly',
@@ -385,6 +397,10 @@ function speakSurprise(surprise){
     else if(surprise.name === '杰瑞'){ text = 'Jerry'; lang = 'en-US'; }
     else if(surprise.name === '佩奇'){ text = 'Peppa'; lang = 'en-US'; }
     else { text = surprise.name; lang = 'zh-CN'; }
+  } else if(surprise.type === 'number'){
+    text = surprise.word; lang = 'en-US';
+  } else if(surprise.type === 'greeting'){
+    text = surprise.text; lang = 'en-US';
   }
   if(!text) return;
   speechSynthesis.cancel();
@@ -397,11 +413,13 @@ function speakSurprise(surprise){
 function pickSurprise(cfg){
   if(Math.random() > cfg.surpriseRate) return null;
   const r = Math.random();
-  if(r < .18) return { type:'dabing', src: IMAGES.dabing };
-  if(r < .30) return { type:'baba',   src: IMAGES.baba };
-  if(r < .42) return { type:'mama',   src: IMAGES.mama };
-  if(r < .75) { const c = pick(CARTOON_CHARS); return { type:'cartoon', src: c.src, name: c.name }; }
-  if(r < .90) return { type:'animal', emoji: pick(ANIMALS) };
+  if(r < .14) return { type:'dabing', src: IMAGES.dabing };
+  if(r < .23) return { type:'baba',   src: IMAGES.baba };
+  if(r < .32) return { type:'mama',   src: IMAGES.mama };
+  if(r < .58) { const c = pick(CARTOON_CHARS); return { type:'cartoon', src: c.src, name: c.name }; }
+  if(r < .72) return { type:'animal', emoji: pick(ANIMALS) };
+  if(r < .84) { const n = pick(NUMBERS); return { type:'number', emoji: n.display, word: n.word }; }
+  if(r < .94) { const g = pick(GREETINGS); return { type:'greeting', emoji: g.display, text: g.text }; }
   return { type:'star', emoji: pick(STARS) };
 }
 
@@ -427,6 +445,8 @@ function createBubble(){
   if(surprise){
     if(surprise.src){
       contentHTML = `<div class="bubble-content"><img src="${surprise.src}" alt="${surprise.type}"></div>`;
+    } else if(surprise.type === 'greeting'){
+      contentHTML = `<div class="bubble-content bubble-greeting"><span class="bubble-emoji" style="font-size:45%">${surprise.emoji}</span><span class="bubble-greeting-text">${surprise.text}</span></div>`;
     } else {
       contentHTML = `<div class="bubble-content"><span class="bubble-emoji">${surprise.emoji}</span></div>`;
     }

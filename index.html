@@ -62,6 +62,10 @@ html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webk
 .surprise-reveal img{width:80%;height:80%;object-fit:cover;border-radius:50%;border:.6vmin solid #fff;box-shadow:0 0 3vmin rgba(255,255,255,.9)}
 .surprise-reveal .reveal-emoji{font-size:18vmin;filter:drop-shadow(0 0 1vmin rgba(0,0,0,.2))}
 
+/* Word Label (speech fallback) */
+.word-label{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(0);pointer-events:none;z-index:200;font-size:10vmin;font-weight:900;color:#fff;text-shadow:0 .4vmin 1.5vmin rgba(0,0,0,.35),0 0 3vmin rgba(255,255,255,.4);animation:wordPop 1.6s ease-out forwards;white-space:nowrap;letter-spacing:.3vmin}
+@keyframes wordPop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}12%{transform:translate(-50%,-50%) scale(1.15);opacity:1}20%{transform:translate(-50%,-50%) scale(1)}75%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-60%) scale(.9);opacity:0}}
+
 /* ===== Pause Button ===== */
 .pause-btn{position:fixed;top:2vmin;right:2vmin;width:8vmin;height:8vmin;min-width:40px;min-height:40px;border:none;border-radius:50%;background:rgba(255,255,255,.4);font-size:3.5vmin;cursor:pointer;z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);color:#666}
 
@@ -425,19 +429,20 @@ const _voiceCache = {};
 function getVoice(lang){
   if(_voiceCache[lang]) return _voiceCache[lang];
   const voices = speechSynthesis.getVoices();
-  // Exact match first, then prefix match
   let v = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
   if(v) _voiceCache[lang] = v;
   return v;
 }
-// Eagerly load voices (iOS fires voiceschanged asynchronously)
 if('speechSynthesis' in window){
   speechSynthesis.getVoices();
   speechSynthesis.addEventListener('voiceschanged', () => { _voiceCache['en-US'] = null; _voiceCache['zh-CN'] = null; });
 }
 
-function speakSurprise(surprise){
-  if(!S.soundOn || !('speechSynthesis' in window)) return;
+// Speech availability detection: 'unknown' → 'yes' | 'no'
+let _speechStatus = 'unknown';
+let _speechTestCount = 0;
+
+function getSurpriseText(surprise){
   let text, lang;
   if(surprise.emoji && EMOJI_WORDS[surprise.emoji]){
     text = EMOJI_WORDS[surprise.emoji]; lang = 'en-US';
@@ -461,15 +466,74 @@ function speakSurprise(surprise){
   } else if(surprise.type === 'greeting'){
     text = surprise.text; lang = 'en-US';
   }
-  if(!text) return;
-  // iOS: speak() MUST stay in synchronous user-gesture call chain
-  if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
-  // iOS Chrome (WKWebView): explicitly setting voice is required
-  const voice = getVoice(lang);
-  if(voice) u.voice = voice;
-  speechSynthesis.speak(u);
+  return text ? {text, lang} : null;
+}
+
+// Visual word label fallback + chime sound
+function showWordLabel(text){
+  const el = document.createElement('div');
+  el.className = 'word-label';
+  el.textContent = text;
+  document.getElementById('bubbleContainer').appendChild(el);
+  setTimeout(() => el.remove(), 1700);
+}
+
+function playChime(){
+  if(!S.soundOn || !S.audioCtx) return;
+  const ctx = S.audioCtx, t = ctx.currentTime;
+  // Two-tone chime to draw attention to the word
+  [0, .12].forEach((d, i) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = i === 0 ? 660 : 880;
+    g.gain.setValueAtTime(.25, t+d);
+    g.gain.exponentialRampToValueAtTime(.001, t+d+.35);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t+d); osc.stop(t+d+.4);
+  });
+}
+
+function speakSurprise(surprise){
+  const info = getSurpriseText(surprise);
+  if(!info) return;
+
+  // Always show word label (visual learning, works everywhere)
+  showWordLabel(info.text);
+
+  if(!S.soundOn) return;
+
+  // Try speechSynthesis if not known-broken
+  if('speechSynthesis' in window && _speechStatus !== 'no'){
+    if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(info.text);
+    u.lang = info.lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
+    const voice = getVoice(info.lang);
+    if(voice) u.voice = voice;
+
+    // Detect if speech actually works (first few attempts)
+    if(_speechStatus === 'unknown' && _speechTestCount < 3){
+      _speechTestCount++;
+      let started = false;
+      u.onstart = () => { started = true; _speechStatus = 'yes'; };
+      setTimeout(() => {
+        if(!started){
+          _speechStatus = 'no';
+          // Play fallback chime for this one too
+          playChime();
+          if(window._dlog) window._dlog('Speech FAILED → fallback mode enabled');
+        }
+      }, 400);
+    }
+
+    speechSynthesis.speak(u);
+
+    // If already known broken, also play chime
+    if(_speechStatus === 'no') playChime();
+  } else {
+    // No speechSynthesis or known broken → chime
+    playChime();
+  }
 }
 
 // ===== Surprise System =====

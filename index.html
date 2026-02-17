@@ -171,6 +171,7 @@ const BUBBLE_COLORS = [
 
 const ANIMALS = ['🐶','🐱','🐰','🐻','🐼','🦊','🐸','🐵','🐷','🦋','🐠','🐙','🐢','🐘','🦁'];
 const STARS = ['⭐','🌟','✨','💫','🌈'];
+const VEHICLES = ['✈️','🚀','🚁','🛸','🚂','🚢','🚗','🚒','🚑','🏎️','🚌','🚜','🛵','🚲','⛵'];
 const NUMBERS = [
   {display:'1️⃣', word:'One'},{display:'2️⃣', word:'Two'},{display:'3️⃣', word:'Three'},
   {display:'4️⃣', word:'Four'},{display:'5️⃣', word:'Five'},{display:'6️⃣', word:'Six'},
@@ -186,6 +187,9 @@ const EMOJI_WORDS = {
   '🦊':'Fox','🐸':'Frog','🐵':'Monkey','🐷':'Pig','🦋':'Butterfly',
   '🐠':'Fish','🐙':'Octopus','🐢':'Turtle','🐘':'Elephant','🦁':'Lion',
   '⭐':'Star','🌟':'Star','✨':'Sparkle','💫':'Star','🌈':'Rainbow',
+  '✈️':'Airplane','🚀':'Rocket','🚁':'Helicopter','🛸':'UFO','🚂':'Train',
+  '🚢':'Ship','🚗':'Car','🚒':'Fire Truck','🚑':'Ambulance','🏎️':'Race Car',
+  '🚌':'Bus','🚜':'Tractor','🛵':'Scooter','🚲':'Bicycle','⛵':'Sailboat',
 };
 const ENCOURAGEMENTS = ['哇！','好棒！','嘻嘻','太厉害了！','漂亮！','真棒！','厉害！'];
 
@@ -489,10 +493,11 @@ function pickSurprise(cfg){
   if(r < .32) return { type:'nainai', src: IMAGES.nainai };
   if(r < .36) return { type:'waipo',  src: IMAGES.waipo };
   if(r < .42) return { type:'cartoon', src: CHAR_IMAGES.doraemon, name: '哆啦A梦' };
-  if(r < .58) { const c = pick(CARTOON_CHARS); return { type:'cartoon', src: c.src, name: c.name }; }
-  if(r < .70) return { type:'animal', emoji: pick(ANIMALS) };
-  if(r < .82) { const n = pick(NUMBERS); return { type:'number', emoji: n.display, word: n.word }; }
-  if(r < .92) { const g = pick(GREETINGS); return { type:'greeting', emoji: g.display, text: g.text }; }
+  if(r < .56) { const c = pick(CARTOON_CHARS); return { type:'cartoon', src: c.src, name: c.name }; }
+  if(r < .66) return { type:'animal', emoji: pick(ANIMALS) };
+  if(r < .76) return { type:'vehicle', emoji: pick(VEHICLES) };
+  if(r < .84) { const n = pick(NUMBERS); return { type:'number', emoji: n.display, word: n.word }; }
+  if(r < .94) { const g = pick(GREETINGS); return { type:'greeting', emoji: g.display, text: g.text }; }
   return { type:'star', emoji: pick(STARS) };
 }
 

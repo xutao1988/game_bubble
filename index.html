@@ -439,9 +439,9 @@ function popBubble(b){
     playPop();
   }
 
-  // Pop animation on bubble
+  // Pop animation on inner element (not the positioned outer div)
   b.el.style.pointerEvents = 'none';
-  b.el.style.animation = 'bubblePop .3s ease-out forwards';
+  b.el.querySelector('.bubble-inner').style.animation = 'bubblePop .3s ease-out forwards';
 
   // Particles
   createParticles(cx, cy, b.color.particle, b.surprise ? 16 : 10);

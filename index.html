@@ -125,9 +125,9 @@ html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webk
 
 // ===== Configuration =====
 const DIFFICULTY = {
-  baby:      { maxBubbles: 10, spawnMs: 600,  speedVmin: 1.8, minSize: 18, maxSize: 40, surpriseRate: .75 },
-  toddler:   { maxBubbles: 14, spawnMs: 400,  speedVmin: 2.8, minSize: 14, maxSize: 34, surpriseRate: .60 },
-  challenge: { maxBubbles: 18, spawnMs: 280,  speedVmin: 4.0, minSize: 10, maxSize: 28, surpriseRate: .50 },
+  baby:      { maxBubbles: 14, spawnMs: 350,  speedVmin: 2.2, minSize: 18, maxSize: 40, surpriseRate: .75 },
+  toddler:   { maxBubbles: 18, spawnMs: 250,  speedVmin: 3.2, minSize: 14, maxSize: 34, surpriseRate: .60 },
+  challenge: { maxBubbles: 22, spawnMs: 180,  speedVmin: 4.5, minSize: 10, maxSize: 28, surpriseRate: .50 },
 };
 
 const BUBBLE_COLORS = [
@@ -292,6 +292,12 @@ function savePrefs(){
 function initAudio(){
   if(S.audioCtx) return;
   S.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Warm up speech synthesis on iOS (must be triggered from user gesture)
+  if('speechSynthesis' in window){
+    const warm = new SpeechSynthesisUtterance('');
+    warm.volume = 0;
+    speechSynthesis.speak(warm);
+  }
 }
 function resumeAudio(){
   if(S.audioCtx && S.audioCtx.state === 'suspended') S.audioCtx.resume();
@@ -415,10 +421,13 @@ function speakSurprise(surprise){
     text = surprise.text; lang = 'en-US';
   }
   if(!text) return;
+  // iOS WebKit: cancel() immediately before speak() causes silence; use short delay
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
-  speechSynthesis.speak(u);
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
+    speechSynthesis.speak(u);
+  }, 80);
 }
 
 // ===== Surprise System =====
@@ -449,8 +458,11 @@ function createBubble(){
   const maxSz = surprise ? cfg.maxSize : Math.min(cfg.maxSize, cfg.minSize + 6);
   const sizeV = rand(cfg.minSize, maxSz);
   const sizePx = sizeV * v;
-  const x = rand(sizePx*.6, window.innerWidth - sizePx*.6);
-  const y = window.innerHeight + sizePx * .5;
+  const W = window.innerWidth, H = window.innerHeight;
+  const x = rand(sizePx*.3, W - sizePx*.3);
+  // ~35% of bubbles pop in mid-screen directly for faster action
+  const midSpawn = Math.random() < .35;
+  const y = midSpawn ? rand(H * .3, H * .65) : H + sizePx * .5;
 
   const id = S.nextId++;
   const el = document.createElement('div');
@@ -622,7 +634,8 @@ container.addEventListener('mousedown', e => {
 function startSpawning(){
   stopSpawning();
   const cfg = DIFFICULTY[S.diff];
-  createBubble(); // Immediate first bubble
+  // Burst several bubbles immediately so screen isn't empty
+  for(let i = 0; i < 4; i++) createBubble();
   S.spawnTimer = setInterval(() => {
     if(S.running && !S.paused) createBubble();
   }, cfg.spawnMs);

@@ -180,16 +180,28 @@ const CARTOON_CHARS = [
   { name:'七娃', src: CHAR_IMAGES.huluwa7 },
 ];
 
-const NOTE_FREQ = { C5:523.25, D5:587.33, E5:659.25, G5:783.99, A5:880.00, C6:1046.50 };
-const MELODY = [
-  [NOTE_FREQ.C5,1],[NOTE_FREQ.E5,1],[NOTE_FREQ.G5,1.5],[NOTE_FREQ.A5,.5],
-  [NOTE_FREQ.G5,1],[NOTE_FREQ.E5,1],[NOTE_FREQ.D5,1.5],[0,.5],
-  [NOTE_FREQ.D5,1],[NOTE_FREQ.E5,1],[NOTE_FREQ.G5,1.5],[NOTE_FREQ.A5,.5],
-  [NOTE_FREQ.C6,1],[NOTE_FREQ.A5,1],[NOTE_FREQ.G5,1.5],[0,.5],
-  [NOTE_FREQ.A5,1],[NOTE_FREQ.G5,1],[NOTE_FREQ.E5,1.5],[NOTE_FREQ.D5,.5],
-  [NOTE_FREQ.C5,1],[NOTE_FREQ.D5,1],[NOTE_FREQ.E5,1.5],[0,.5],
+const N = { C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00,C6:1046.50 };
+const MELODIES = [
+  { name:'小星星', wave:'triangle', beat:400, notes:[
+    [N.C5,1],[N.C5,1],[N.G5,1],[N.G5,1],[N.A5,1],[N.A5,1],[N.G5,2],
+    [N.F5,1],[N.F5,1],[N.E5,1],[N.E5,1],[N.D5,1],[N.D5,1],[N.C5,2],[0,.5],
+    [N.G5,1],[N.G5,1],[N.F5,1],[N.F5,1],[N.E5,1],[N.E5,1],[N.D5,2],
+    [N.G5,1],[N.G5,1],[N.F5,1],[N.F5,1],[N.E5,1],[N.E5,1],[N.D5,2],[0,.5],
+  ]},
+  { name:'欢乐颂', wave:'sine', beat:380, notes:[
+    [N.E5,1],[N.E5,1],[N.F5,1],[N.G5,1],[N.G5,1],[N.F5,1],[N.E5,1],[N.D5,1],
+    [N.C5,1],[N.C5,1],[N.D5,1],[N.E5,1],[N.E5,1.5],[N.D5,.5],[N.D5,2],[0,.5],
+    [N.E5,1],[N.E5,1],[N.F5,1],[N.G5,1],[N.G5,1],[N.F5,1],[N.E5,1],[N.D5,1],
+    [N.C5,1],[N.C5,1],[N.D5,1],[N.E5,1],[N.D5,1.5],[N.C5,.5],[N.C5,2],[0,.5],
+  ]},
+  { name:'摇篮曲', wave:'sine', beat:500, notes:[
+    [N.E5,1.5],[N.D5,.5],[N.C5,1],[N.E5,1.5],[N.D5,.5],[N.C5,1],
+    [N.G5,1],[N.E5,1],[N.C5,1],[N.D5,3],[0,.5],
+    [N.D5,1],[N.E5,.5],[N.D5,.5],[N.C5,1],[N.A4,1],[N.C5,1],[N.D5,1],
+    [N.E5,1],[N.C5,1],[N.D5,1],[N.C5,3],[0,.5],
+  ]},
 ];
-const BEAT_MS = 420;
+const MUSIC_LABELS = ['🎵 小星星','🎵 欢乐颂','🎵 摇篮曲','🔇 关闭'];
 
 // ===== State =====
 const S = {
@@ -202,6 +214,7 @@ const S = {
   audioCtx: null,
   soundOn: true,
   musicOn: true,
+  musicTrack: 0,
   rafId: null,
   spawnTimer: null,
   lastTime: 0,
@@ -239,6 +252,8 @@ function loadPrefs(){
     const p = localStorage.getItem('dabing_bubble_pops');
     if(s !== null) S.soundOn = s === 'on';
     if(m !== null) S.musicOn = m === 'on';
+    const mt = localStorage.getItem('dabing_bubble_track');
+    if(mt !== null) S.musicTrack = Math.min(parseInt(mt,10)||0, MELODIES.length-1);
     if(d && DIFFICULTY[d]) S.diff = d;
     if(p) S.popCount = parseInt(p,10)||0;
   } catch(e){}
@@ -247,6 +262,7 @@ function savePrefs(){
   try {
     localStorage.setItem('dabing_bubble_sound', S.soundOn?'on':'off');
     localStorage.setItem('dabing_bubble_music', S.musicOn?'on':'off');
+    localStorage.setItem('dabing_bubble_track', String(S.musicTrack));
     localStorage.setItem('dabing_bubble_diff', S.diff);
     localStorage.setItem('dabing_bubble_pops', String(S.popCount));
   } catch(e){}
@@ -309,14 +325,16 @@ function playSparkle(){
 // ===== Music =====
 function playMelodyNote(){
   if(!S.musicOn || !S.audioCtx || !S.running || S.paused) return;
-  const [freq, beats] = MELODY[S.melodyIdx % MELODY.length];
-  const dur = beats * BEAT_MS / 1000;
+  const track = MELODIES[S.musicTrack];
+  if(!track) return;
+  const [freq, beats] = track.notes[S.melodyIdx % track.notes.length];
+  const dur = beats * track.beat / 1000;
 
   if(freq > 0){
     const ctx = S.audioCtx, t = ctx.currentTime;
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
-    osc.type = 'triangle';
+    osc.type = track.wave || 'triangle';
     osc.frequency.value = freq;
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(.055, t+.025);
@@ -327,10 +345,11 @@ function playMelodyNote(){
   }
 
   S.melodyIdx++;
-  S.melodyTimer = setTimeout(playMelodyNote, beats * BEAT_MS);
+  S.melodyTimer = setTimeout(playMelodyNote, beats * track.beat);
 }
 function startMusic(){
   stopMusic();
+  S.melodyIdx = 0;
   if(S.musicOn) playMelodyNote();
 }
 function stopMusic(){
@@ -364,6 +383,7 @@ function speakSurprise(surprise){
   } else if(surprise.type === 'cartoon'){
     if(surprise.name === '汤姆'){ text = 'Tom'; lang = 'en-US'; }
     else if(surprise.name === '杰瑞'){ text = 'Jerry'; lang = 'en-US'; }
+    else if(surprise.name === '佩奇'){ text = 'Peppa'; lang = 'en-US'; }
     else { text = surprise.name; lang = 'zh-CN'; }
   }
   if(!text) return;
@@ -636,7 +656,7 @@ function updateSoundBtns(){
   const mb = $('musicBtn');
   sb.textContent = S.soundOn ? '🔊 音效' : '🔇 音效';
   sb.classList.toggle('off', !S.soundOn);
-  mb.textContent = S.musicOn ? '🎵 音乐' : '🔇 音乐';
+  mb.textContent = S.musicOn ? MUSIC_LABELS[S.musicTrack] : MUSIC_LABELS[MUSIC_LABELS.length-1];
   mb.classList.toggle('off', !S.musicOn);
 }
 
@@ -657,11 +677,20 @@ addBtnListener($('soundBtn'), () => {
   if(S.soundOn) playPop(1);
 });
 addBtnListener($('musicBtn'), () => {
-  S.musicOn = !S.musicOn;
+  stopMusic();
+  if(!S.musicOn){
+    // Was off → turn on track 0
+    S.musicOn = true; S.musicTrack = 0;
+  } else if(S.musicTrack < MELODIES.length - 1){
+    // Next track
+    S.musicTrack++;
+  } else {
+    // Was last track → turn off
+    S.musicOn = false;
+  }
   updateSoundBtns();
   savePrefs();
   if(S.musicOn && S.running && !S.paused) startMusic();
-  else stopMusic();
 });
 
 // Prevent default touch behaviors

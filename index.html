@@ -443,12 +443,14 @@ function createBubble(){
   if(S.bubbles.size >= cfg.maxBubbles) return;
 
   const v = vmin();
-  const sizeV = rand(cfg.minSize, cfg.maxSize);
+  const color = pick(BUBBLE_COLORS);
+  const surprise = pickSurprise(cfg);
+  // Blank bubbles use smaller size range
+  const maxSz = surprise ? cfg.maxSize : Math.min(cfg.maxSize, cfg.minSize + 6);
+  const sizeV = rand(cfg.minSize, maxSz);
   const sizePx = sizeV * v;
   const x = rand(sizePx*.6, window.innerWidth - sizePx*.6);
   const y = window.innerHeight + sizePx * .5;
-  const color = pick(BUBBLE_COLORS);
-  const surprise = pickSurprise(cfg);
 
   const id = S.nextId++;
   const el = document.createElement('div');
@@ -567,7 +569,11 @@ function gameLoop(ts){
   const v = vmin();
   for(const b of S.bubbles.values()){
     if(!b.active) continue;
-    b.y -= b.speedY * dt / 1000;
+    // Speed: fast at bottom, easing to slow near top
+    const screenH = window.innerHeight;
+    const progress = Math.max(0, Math.min(1, 1 - b.y / screenH)); // 0=bottom, 1=top
+    const speedMul = 1.8 - progress * 1.3; // 1.8x at bottom → 0.5x at top
+    b.y -= b.speedY * speedMul * dt / 1000;
     b.wobblePhase += b.wobbleFreq * dt / 1000;
     b.breathPhase += 2.5 * dt / 1000;
     updateBubblePos(b);

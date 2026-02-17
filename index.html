@@ -83,6 +83,10 @@ html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webk
 
 /* ===== Pop Counter ===== */
 .pop-counter{position:fixed;bottom:2vmin;left:50%;transform:translateX(-50%);font-size:3vmin;color:rgba(255,255,255,.5);z-index:50;pointer-events:none}
+/* ===== Debug Panel ===== */
+#debugPanel{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.85);color:#0f0;font:2.5vmin/1.4 monospace;padding:2vmin;z-index:9999;max-height:35vh;overflow-y:auto;pointer-events:auto;word-break:break-all}
+#debugPanel.show{display:block}
+#debugToggle{position:fixed;bottom:1vmin;right:1vmin;z-index:10000;font-size:3.5vmin;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:1vmin;padding:1vmin 2vmin;pointer-events:auto}
 </style>
 </head>
 <body>
@@ -798,6 +802,107 @@ function preloadImages(){
 loadPrefs();
 updatePopCounter();
 preloadImages();
+
+// ===== Speech Debug Panel =====
+(function(){
+  const btn = document.createElement('button');
+  btn.id = 'debugToggle'; btn.textContent = 'DBG';
+  document.body.appendChild(btn);
+  const panel = document.createElement('div');
+  panel.id = 'debugPanel';
+  document.body.appendChild(panel);
+  let logs = [];
+  function dlog(msg){
+    const t = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit',fractionalSecondDigits:3});
+    logs.push(`[${t}] ${msg}`);
+    if(logs.length > 40) logs.shift();
+    panel.innerHTML = logs.join('<br>');
+    panel.scrollTop = panel.scrollHeight;
+  }
+  window._dlog = dlog;
+  btn.addEventListener('click', () => {
+    panel.classList.toggle('show');
+    if(panel.classList.contains('show')){
+      // Run diagnostics
+      const ss = 'speechSynthesis' in window;
+      dlog('=== DIAGNOSTICS ===');
+      dlog('speechSynthesis API: ' + ss);
+      if(ss){
+        dlog('speaking: ' + speechSynthesis.speaking);
+        dlog('pending: ' + speechSynthesis.pending);
+        dlog('paused: ' + speechSynthesis.paused);
+        const voices = speechSynthesis.getVoices();
+        dlog('voices loaded: ' + voices.length);
+        if(voices.length > 0){
+          const en = voices.filter(v => v.lang.startsWith('en'));
+          const zh = voices.filter(v => v.lang.startsWith('zh'));
+          dlog('en voices: ' + en.length + ', zh voices: ' + zh.length);
+          if(en.length) dlog('en[0]: ' + en[0].name + ' ' + en[0].lang);
+          if(zh.length) dlog('zh[0]: ' + zh[0].name + ' ' + zh[0].lang);
+        }
+      }
+      dlog('userAgent: ' + navigator.userAgent.substring(0, 120));
+      dlog('soundOn: ' + S.soundOn);
+      // Test speak button
+      dlog('--- Tap a surprise bubble to test ---');
+    }
+  });
+  // Patch speakSurprise to add logging
+  const origSpeak = window.speakSurprise;
+  window.speakSurprise = function(surprise){
+    if(!window._dlog) return origSpeak(surprise);
+    const d = window._dlog;
+    d('speakSurprise called, type=' + (surprise?surprise.type:'null'));
+    if(!S.soundOn){ d('SKIP: soundOn=false'); return; }
+    if(!('speechSynthesis' in window)){ d('SKIP: no speechSynthesis'); return; }
+
+    let text, lang;
+    if(surprise.emoji && EMOJI_WORDS[surprise.emoji]){
+      text = EMOJI_WORDS[surprise.emoji]; lang = 'en-US';
+    } else if(surprise.type === 'dabing'){
+      text = '大饼'; lang = 'zh-CN';
+    } else if(surprise.type === 'baba'){
+      text = 'Daddy'; lang = 'en-US';
+    } else if(surprise.type === 'mama'){
+      text = 'Mommy'; lang = 'en-US';
+    } else if(surprise.type === 'nainai'){
+      text = '奶奶'; lang = 'zh-CN';
+    } else if(surprise.type === 'waipo'){
+      text = '外婆'; lang = 'zh-CN';
+    } else if(surprise.type === 'cartoon'){
+      text = surprise.name; lang = 'zh-CN';
+      if(surprise.name === '汤姆'){ text = 'Tom'; lang = 'en-US'; }
+      else if(surprise.name === '杰瑞'){ text = 'Jerry'; lang = 'en-US'; }
+      else if(surprise.name === '佩奇'){ text = 'Peppa'; lang = 'en-US'; }
+    } else if(surprise.type === 'number'){
+      text = surprise.word; lang = 'en-US';
+    } else if(surprise.type === 'greeting'){
+      text = surprise.text; lang = 'en-US';
+    }
+
+    if(!text){ d('SKIP: no text resolved'); return; }
+
+    d('speak: "' + text + '" lang=' + lang);
+    d('pre-state: speaking=' + speechSynthesis.speaking + ' pending=' + speechSynthesis.pending + ' paused=' + speechSynthesis.paused);
+
+    if(speechSynthesis.speaking || speechSynthesis.pending){
+      d('calling cancel()');
+      speechSynthesis.cancel();
+    }
+
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
+    u.onstart = () => d('EVENT: onstart "' + text + '"');
+    u.onend = () => d('EVENT: onend "' + text + '"');
+    u.onerror = (e) => d('EVENT: onerror ' + e.error);
+    try {
+      speechSynthesis.speak(u);
+      d('speak() called OK, speaking=' + speechSynthesis.speaking + ' pending=' + speechSynthesis.pending);
+    } catch(e){
+      d('speak() THREW: ' + e.message);
+    }
+  };
+})();
 </script>
 </body>
 </html>

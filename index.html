@@ -420,6 +420,22 @@ function maybeEncourage(){
 }
 
 // ===== Speak Surprise Name =====
+// Voice cache for iOS Chrome (WKWebView requires explicit voice assignment)
+const _voiceCache = {};
+function getVoice(lang){
+  if(_voiceCache[lang]) return _voiceCache[lang];
+  const voices = speechSynthesis.getVoices();
+  // Exact match first, then prefix match
+  let v = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+  if(v) _voiceCache[lang] = v;
+  return v;
+}
+// Eagerly load voices (iOS fires voiceschanged asynchronously)
+if('speechSynthesis' in window){
+  speechSynthesis.getVoices();
+  speechSynthesis.addEventListener('voiceschanged', () => { _voiceCache['en-US'] = null; _voiceCache['zh-CN'] = null; });
+}
+
 function speakSurprise(surprise){
   if(!S.soundOn || !('speechSynthesis' in window)) return;
   let text, lang;
@@ -447,10 +463,12 @@ function speakSurprise(surprise){
   }
   if(!text) return;
   // iOS: speak() MUST stay in synchronous user-gesture call chain
-  // cancel + speak synchronously in same handler works; setTimeout breaks gesture context
   if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
+  // iOS Chrome (WKWebView): explicitly setting voice is required
+  const voice = getVoice(lang);
+  if(voice) u.voice = voice;
   speechSynthesis.speak(u);
 }
 
@@ -892,12 +910,25 @@ preloadImages();
 
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
+    // Explicitly set voice (required for iOS Chrome WKWebView)
+    const voice = getVoice(lang);
+    if(voice){ u.voice = voice; d('voice set: ' + voice.name + ' ' + voice.lang); }
+    else { d('WARNING: no voice found for ' + lang); }
     u.onstart = () => d('EVENT: onstart "' + text + '"');
     u.onend = () => d('EVENT: onend "' + text + '"');
     u.onerror = (e) => d('EVENT: onerror ' + e.error);
     try {
       speechSynthesis.speak(u);
       d('speak() called OK, speaking=' + speechSynthesis.speaking + ' pending=' + speechSynthesis.pending);
+      // Detect silent mode: if no onstart within 500ms, likely muted
+      const checkText = text;
+      setTimeout(() => {
+        if(!speechSynthesis.speaking && !speechSynthesis.pending){
+          d('!! NO SPEECH after 500ms for "' + checkText + '"');
+          d('!! CHECK: iPhone mute switch (side toggle) or system volume');
+          d('!! Web Audio bypasses mute, but speechSynthesis does NOT');
+        }
+      }, 500);
     } catch(e){
       d('speak() THREW: ' + e.message);
     }

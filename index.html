@@ -321,12 +321,6 @@ function savePrefs(){
 function initAudio(){
   if(S.audioCtx) return;
   S.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  // Warm up speech synthesis on iOS (must be triggered from user gesture)
-  if('speechSynthesis' in window){
-    const warm = new SpeechSynthesisUtterance('');
-    warm.volume = 0;
-    speechSynthesis.speak(warm);
-  }
 }
 function resumeAudio(){
   if(S.audioCtx && S.audioCtx.state === 'suspended') S.audioCtx.resume();
@@ -417,32 +411,33 @@ function maybeEncourage(){
   if(now - S.lastEncourage < 4500) return;
   if(Math.random() > .25) return;
   S.lastEncourage = now;
-  if(!('speechSynthesis' in window)) return;
+  if(!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(pick(ENCOURAGEMENTS));
-  u.lang = 'zh-CN'; u.rate = .9; u.pitch = 1.3; u.volume = .6;
-  speechSynthesis.speak(u);
+  u.lang = 'zh-CN'; u.rate = 0.9; u.pitch = 1.3;
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(v => v.lang.startsWith('zh'));
+  if(v) u.voice = v;
+  window.speechSynthesis.speak(u);
 }
 
 // ===== Speak Surprise Name =====
-// Voice cache for iOS Chrome (WKWebView requires explicit voice assignment)
-const _voiceCache = {};
-function getVoice(lang){
-  if(_voiceCache[lang]) return _voiceCache[lang];
-  const voices = speechSynthesis.getVoices();
-  let v = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-  if(v) _voiceCache[lang] = v;
-  return v;
-}
-if('speechSynthesis' in window){
-  speechSynthesis.getVoices();
-  speechSynthesis.addEventListener('voiceschanged', () => { _voiceCache['en-US'] = null; _voiceCache['zh-CN'] = null; });
+// Preload voices (same pattern as animal-game.html which works on iOS)
+if(window.speechSynthesis){
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
-// Speech availability detection: 'unknown' → 'yes' | 'no'
-let _speechStatus = 'unknown';
-let _speechTestCount = 0;
+function showWordLabel(text){
+  const el = document.createElement('div');
+  el.className = 'word-label';
+  el.textContent = text;
+  document.getElementById('bubbleContainer').appendChild(el);
+  setTimeout(() => el.remove(), 1700);
+}
 
-function getSurpriseText(surprise){
+function speakSurprise(surprise){
+  if(!surprise) return;
   let text, lang;
   if(surprise.emoji && EMOJI_WORDS[surprise.emoji]){
     text = EMOJI_WORDS[surprise.emoji]; lang = 'en-US';
@@ -466,74 +461,22 @@ function getSurpriseText(surprise){
   } else if(surprise.type === 'greeting'){
     text = surprise.text; lang = 'en-US';
   }
-  return text ? {text, lang} : null;
-}
+  if(!text) return;
 
-// Visual word label fallback + chime sound
-function showWordLabel(text){
-  const el = document.createElement('div');
-  el.className = 'word-label';
-  el.textContent = text;
-  document.getElementById('bubbleContainer').appendChild(el);
-  setTimeout(() => el.remove(), 1700);
-}
+  // Always show word label
+  showWordLabel(text);
 
-function playChime(){
-  if(!S.soundOn || !S.audioCtx) return;
-  const ctx = S.audioCtx, t = ctx.currentTime;
-  // Two-tone chime to draw attention to the word
-  [0, .12].forEach((d, i) => {
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = i === 0 ? 660 : 880;
-    g.gain.setValueAtTime(.25, t+d);
-    g.gain.exponentialRampToValueAtTime(.001, t+d+.35);
-    osc.connect(g); g.connect(ctx.destination);
-    osc.start(t+d); osc.stop(t+d+.4);
-  });
-}
-
-function speakSurprise(surprise){
-  const info = getSurpriseText(surprise);
-  if(!info) return;
-
-  // Always show word label (visual learning, works everywhere)
-  showWordLabel(info.text);
-
-  if(!S.soundOn) return;
-
-  // Try speechSynthesis if not known-broken
-  if('speechSynthesis' in window && _speechStatus !== 'no'){
-    if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(info.text);
-    u.lang = info.lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
-    const voice = getVoice(info.lang);
-    if(voice) u.voice = voice;
-
-    // Detect if speech actually works (first few attempts)
-    if(_speechStatus === 'unknown' && _speechTestCount < 3){
-      _speechTestCount++;
-      let started = false;
-      u.onstart = () => { started = true; _speechStatus = 'yes'; };
-      setTimeout(() => {
-        if(!started){
-          _speechStatus = 'no';
-          // Play fallback chime for this one too
-          playChime();
-          if(window._dlog) window._dlog('Speech FAILED → fallback mode enabled');
-        }
-      }, 400);
-    }
-
-    speechSynthesis.speak(u);
-
-    // If already known broken, also play chime
-    if(_speechStatus === 'no') playChime();
-  } else {
-    // No speechSynthesis or known broken → chime
-    playChime();
-  }
+  // Speech: exact same pattern as animal-game.html (proven working on iOS)
+  if(!S.soundOn || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang;
+  u.rate = 0.8;
+  u.pitch = 1.1;
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+  if(v) u.voice = v;
+  window.speechSynthesis.speak(u);
 }
 
 // ===== Surprise System =====
@@ -929,73 +872,51 @@ preloadImages();
       dlog('--- Tap a surprise bubble to test ---');
     }
   });
-  // Patch speakSurprise to add logging
+  // Patch speakSurprise to add logging (uses same pattern as animal-game.html)
   const origSpeak = window.speakSurprise;
   window.speakSurprise = function(surprise){
     if(!window._dlog) return origSpeak(surprise);
     const d = window._dlog;
-    d('speakSurprise called, type=' + (surprise?surprise.type:'null'));
-    if(!S.soundOn){ d('SKIP: soundOn=false'); return; }
-    if(!('speechSynthesis' in window)){ d('SKIP: no speechSynthesis'); return; }
+    if(!surprise){ d('SKIP: no surprise'); return; }
+    d('speakSurprise called, type=' + surprise.type);
 
+    // Resolve text (same logic as original)
     let text, lang;
-    if(surprise.emoji && EMOJI_WORDS[surprise.emoji]){
-      text = EMOJI_WORDS[surprise.emoji]; lang = 'en-US';
-    } else if(surprise.type === 'dabing'){
-      text = '大饼'; lang = 'zh-CN';
-    } else if(surprise.type === 'baba'){
-      text = 'Daddy'; lang = 'en-US';
-    } else if(surprise.type === 'mama'){
-      text = 'Mommy'; lang = 'en-US';
-    } else if(surprise.type === 'nainai'){
-      text = '奶奶'; lang = 'zh-CN';
-    } else if(surprise.type === 'waipo'){
-      text = '外婆'; lang = 'zh-CN';
-    } else if(surprise.type === 'cartoon'){
+    if(surprise.emoji && EMOJI_WORDS[surprise.emoji]){ text = EMOJI_WORDS[surprise.emoji]; lang = 'en-US'; }
+    else if(surprise.type === 'dabing'){ text = '大饼'; lang = 'zh-CN'; }
+    else if(surprise.type === 'baba'){ text = 'Daddy'; lang = 'en-US'; }
+    else if(surprise.type === 'mama'){ text = 'Mommy'; lang = 'en-US'; }
+    else if(surprise.type === 'nainai'){ text = '奶奶'; lang = 'zh-CN'; }
+    else if(surprise.type === 'waipo'){ text = '外婆'; lang = 'zh-CN'; }
+    else if(surprise.type === 'cartoon'){
       text = surprise.name; lang = 'zh-CN';
       if(surprise.name === '汤姆'){ text = 'Tom'; lang = 'en-US'; }
       else if(surprise.name === '杰瑞'){ text = 'Jerry'; lang = 'en-US'; }
       else if(surprise.name === '佩奇'){ text = 'Peppa'; lang = 'en-US'; }
-    } else if(surprise.type === 'number'){
-      text = surprise.word; lang = 'en-US';
-    } else if(surprise.type === 'greeting'){
-      text = surprise.text; lang = 'en-US';
-    }
+    } else if(surprise.type === 'number'){ text = surprise.word; lang = 'en-US'; }
+    else if(surprise.type === 'greeting'){ text = surprise.text; lang = 'en-US'; }
+    if(!text){ d('SKIP: no text'); return; }
 
-    if(!text){ d('SKIP: no text resolved'); return; }
+    // Show word label
+    showWordLabel(text);
 
-    d('speak: "' + text + '" lang=' + lang);
-    d('pre-state: speaking=' + speechSynthesis.speaking + ' pending=' + speechSynthesis.pending + ' paused=' + speechSynthesis.paused);
+    if(!S.soundOn){ d('SKIP: soundOn=false'); return; }
+    if(!window.speechSynthesis){ d('SKIP: no speechSynthesis'); return; }
 
-    if(speechSynthesis.speaking || speechSynthesis.pending){
-      d('calling cancel()');
-      speechSynthesis.cancel();
-    }
-
+    // Exact same pattern as animal-game.html
+    d('cancel()');
+    window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
-    // Explicitly set voice (required for iOS Chrome WKWebView)
-    const voice = getVoice(lang);
-    if(voice){ u.voice = voice; d('voice set: ' + voice.name + ' ' + voice.lang); }
-    else { d('WARNING: no voice found for ' + lang); }
+    u.lang = lang; u.rate = 0.8; u.pitch = 1.1;
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    d('voices: ' + voices.length + ', match: ' + (voice ? voice.name + ' ' + voice.lang : 'NONE'));
+    if(voice) u.voice = voice;
     u.onstart = () => d('EVENT: onstart "' + text + '"');
     u.onend = () => d('EVENT: onend "' + text + '"');
     u.onerror = (e) => d('EVENT: onerror ' + e.error);
-    try {
-      speechSynthesis.speak(u);
-      d('speak() called OK, speaking=' + speechSynthesis.speaking + ' pending=' + speechSynthesis.pending);
-      // Detect silent mode: if no onstart within 500ms, likely muted
-      const checkText = text;
-      setTimeout(() => {
-        if(!speechSynthesis.speaking && !speechSynthesis.pending){
-          d('!! NO SPEECH after 500ms for "' + checkText + '"');
-          d('!! CHECK: iPhone mute switch (side toggle) or system volume');
-          d('!! Web Audio bypasses mute, but speechSynthesis does NOT');
-        }
-      }, 500);
-    } catch(e){
-      d('speak() THREW: ' + e.message);
-    }
+    window.speechSynthesis.speak(u);
+    d('speak() done, speaking=' + window.speechSynthesis.speaking + ' pending=' + window.speechSynthesis.pending);
   };
 })();
 </script>

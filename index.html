@@ -140,6 +140,12 @@ const BUBBLE_COLORS = [
 
 const ANIMALS = ['🐶','🐱','🐰','🐻','🐼','🦊','🐸','🐵','🐷','🦋','🐠','🐙','🐢','🐘','🦁'];
 const STARS = ['⭐','🌟','✨','💫','🌈'];
+const EMOJI_WORDS = {
+  '🐶':'Dog','🐱':'Cat','🐰':'Rabbit','🐻':'Bear','🐼':'Panda',
+  '🦊':'Fox','🐸':'Frog','🐵':'Monkey','🐷':'Pig','🦋':'Butterfly',
+  '🐠':'Fish','🐙':'Octopus','🐢':'Turtle','🐘':'Elephant','🦁':'Lion',
+  '⭐':'Star','🌟':'Star','✨':'Sparkle','💫':'Star','🌈':'Rainbow',
+};
 const ENCOURAGEMENTS = ['哇！','好棒！','嘻嘻','太厉害了！','漂亮！','真棒！','厉害！'];
 
 // ===== Cartoon Character Images (base64) =====
@@ -343,6 +349,17 @@ function maybeEncourage(){
   speechSynthesis.speak(u);
 }
 
+// ===== Speak English Word for Emoji =====
+function speakEmojiWord(emoji){
+  if(!S.soundOn || !('speechSynthesis' in window)) return;
+  const word = EMOJI_WORDS[emoji];
+  if(!word) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = 'en-US'; u.rate = .75; u.pitch = 1.1; u.volume = .8;
+  speechSynthesis.speak(u);
+}
+
 // ===== Surprise System =====
 function pickSurprise(cfg){
   if(Math.random() > cfg.surpriseRate) return null;
@@ -426,7 +443,11 @@ function popBubble(b){
   // Sound
   if(b.surprise){
     playSparkle();
-    maybeEncourage();
+    if(b.surprise.emoji && EMOJI_WORDS[b.surprise.emoji]){
+      speakEmojiWord(b.surprise.emoji);
+    } else {
+      maybeEncourage();
+    }
   } else {
     playPop();
   }

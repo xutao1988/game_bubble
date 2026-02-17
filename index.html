@@ -75,6 +75,11 @@ html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webk
 .menu-btn.secondary{background:linear-gradient(135deg,#fa709a,#fee140)}
 .menu-btn.sound{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
 .menu-btn.off{opacity:.5}
+.game-links{margin-top:5vmin;display:flex;flex-direction:column;align-items:center;gap:2vmin}
+.game-links-title{font-size:3.2vmin;color:rgba(255,255,255,.6);letter-spacing:.3vmin}
+.game-links-row{display:flex;flex-wrap:wrap;justify-content:center;gap:2.5vmin}
+.game-link{font-size:3.2vmin;padding:2vmin 4vmin;border-radius:5vmin;background:rgba(255,255,255,.18);color:#fff;text-decoration:none;font-weight:600;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:.3vmin solid rgba(255,255,255,.25);letter-spacing:.2vmin;min-height:9vmin;display:flex;align-items:center;justify-content:center;text-align:center}
+.game-link:active{transform:scale(.93);background:rgba(255,255,255,.3)}
 
 /* ===== Pop Counter ===== */
 .pop-counter{position:fixed;bottom:2vmin;left:50%;transform:translateX(-50%);font-size:3vmin;color:rgba(255,255,255,.5);z-index:50;pointer-events:none}
@@ -93,6 +98,14 @@ html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webk
   <div class="game-title">泡泡乐园</div>
   <div class="game-subtitle">大饼游乐场</div>
   <button id="startBtn" class="start-btn">开始玩</button>
+  <div class="game-links">
+    <div class="game-links-title">更多游戏</div>
+    <div class="game-links-row">
+      <a class="game-link" href="https://xutao1988.github.io/game_qiaodishu/">敲大饼大作战</a>
+      <a class="game-link" href="https://xutao1988.github.io/game_animal_name/animal-game.html">识别动物英文名</a>
+      <a class="game-link" href="https://xutao1988.github.io/game_tank_battle/">坦克大战</a>
+    </div>
+  </div>
 </div>
 
 <!-- ===== Game Screen ===== -->
@@ -115,6 +128,14 @@ html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webk
     <button id="soundBtn" class="menu-btn sound">🔊 音效</button>
     <button id="musicBtn" class="menu-btn sound">🎵 音乐</button>
     <button id="exitBtn" class="menu-btn secondary">🏠 回到开始</button>
+    <div class="game-links" style="margin-top:4vmin">
+      <div class="game-links-title">更多游戏</div>
+      <div class="game-links-row">
+        <a class="game-link" href="https://xutao1988.github.io/game_qiaodishu/">敲大饼大作战</a>
+        <a class="game-link" href="https://xutao1988.github.io/game_animal_name/animal-game.html">识别动物英文名</a>
+        <a class="game-link" href="https://xutao1988.github.io/game_tank_battle/">坦克大战</a>
+      </div>
+    </div>
   </div>
 </div>
 

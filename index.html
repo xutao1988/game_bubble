@@ -488,6 +488,7 @@ function pickSurprise(cfg){
   if(r < .28) return { type:'mama',   src: IMAGES.mama };
   if(r < .32) return { type:'nainai', src: IMAGES.nainai };
   if(r < .36) return { type:'waipo',  src: IMAGES.waipo };
+  if(r < .42) return { type:'cartoon', src: CHAR_IMAGES.doraemon, name: '哆啦A梦' };
   if(r < .58) { const c = pick(CARTOON_CHARS); return { type:'cartoon', src: c.src, name: c.name }; }
   if(r < .70) return { type:'animal', emoji: pick(ANIMALS) };
   if(r < .82) { const n = pick(NUMBERS); return { type:'number', emoji: n.display, word: n.word }; }

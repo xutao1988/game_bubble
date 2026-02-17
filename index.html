@@ -509,9 +509,11 @@ function createBubble(){
   const sizePx = sizeV * v;
   const W = window.innerWidth, H = window.innerHeight;
   const x = rand(sizePx*.3, W - sizePx*.3);
-  // ~35% of bubbles pop in mid-screen directly for faster action
-  const midSpawn = Math.random() < .35;
-  const y = midSpawn ? rand(H * .3, H * .65) : H + sizePx * .5;
+  // 60% spawn in mid/lower screen for immediate interaction, 40% from bottom
+  const spawnR = Math.random();
+  const y = spawnR < .3 ? rand(H * .3, H * .55)    // 30% mid-screen
+          : spawnR < .6 ? rand(H * .55, H * .8)     // 30% lower-mid
+          : H + sizePx * .5;                          // 40% from bottom edge
 
   const id = S.nextId++;
   const el = document.createElement('div');
@@ -535,7 +537,7 @@ function createBubble(){
 
   const bubble = {
     id, el, x, y, sizePx, sizeV,
-    speedY: cfg.speedVmin * v * rand(.6, 1.6) * ((cfg.maxSize - sizeV) / (cfg.maxSize - cfg.minSize) * .8 + .6), // smaller = faster
+    speedY: cfg.speedVmin * v * rand(.4, 2.0) * ((cfg.maxSize - sizeV) / (cfg.maxSize - cfg.minSize) * 1.0 + .5), // wider speed range, small=fast
     wobblePhase: rand(0, Math.PI*2),
     wobbleFreq: rand(1.5, 2.5),
     wobbleAmp: rand(1.5, 3) * v,
@@ -632,10 +634,10 @@ function gameLoop(ts){
   const v = vmin();
   for(const b of S.bubbles.values()){
     if(!b.active) continue;
-    // Speed: fast at bottom, easing to slow near top
+    // Speed: fast at bottom, easing to slow near top (gentler curve for more spread)
     const screenH = window.innerHeight;
     const progress = Math.max(0, Math.min(1, 1 - b.y / screenH)); // 0=bottom, 1=top
-    const speedMul = 1.8 - progress * 1.3; // 1.8x at bottom → 0.5x at top
+    const speedMul = 1.5 - progress * 0.8; // 1.5x at bottom → 0.7x at top
     b.y -= b.speedY * speedMul * dt / 1000;
     b.wobblePhase += b.wobbleFreq * dt / 1000;
     b.breathPhase += 2.5 * dt / 1000;
@@ -864,7 +866,7 @@ preloadImages();
 // ===== Speech Debug Panel =====
 (function(){
   const btn = document.createElement('button');
-  btn.id = 'debugToggle'; btn.textContent = 'DBG v9';
+  btn.id = 'debugToggle'; btn.textContent = 'DBG v10';
   document.body.appendChild(btn);
   const panel = document.createElement('div');
   panel.id = 'debugPanel';
@@ -905,36 +907,6 @@ preloadImages();
     }
   });
 
-  // Direct test buttons (click event, same as animal-game)
-  function makeTestBtn(label, text, lang){
-    const b = document.createElement('button');
-    b.textContent = label;
-    b.style.cssText = 'font-size:3vmin;padding:1.5vmin 3vmin;margin:1vmin;border:none;border-radius:1vmin;background:#2196F3;color:#fff;pointer-events:auto';
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dlog('TEST "' + text + '" lang=' + lang);
-      if(!window.speechSynthesis){ dlog('no speechSynthesis!'); return; }
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang; u.rate = 0.8; u.pitch = 1.1;
-      const voices = window.speechSynthesis.getVoices();
-      const v = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-      dlog('voice: ' + (v ? v.name + ' ' + v.lang : 'NONE'));
-      if(v) u.voice = v;
-      u.onstart = () => dlog('TEST onstart');
-      u.onend = () => dlog('TEST onend');
-      u.onerror = (ev) => dlog('TEST onerror: ' + ev.error);
-      window.speechSynthesis.speak(u);
-      dlog('TEST speak() speaking=' + window.speechSynthesis.speaking);
-    });
-    return b;
-  }
-  const testRow = document.createElement('div');
-  testRow.style.cssText = 'position:fixed;bottom:6vmin;right:1vmin;z-index:10001;display:flex;flex-wrap:wrap;gap:1vmin';
-  testRow.appendChild(makeTestBtn('EN:Dog', 'Dog', 'en-US'));
-  testRow.appendChild(makeTestBtn('ZH:大饼', '大饼', 'zh-CN'));
-  testRow.appendChild(makeTestBtn('EN:Hello', 'Hello', 'en-US'));
-  document.body.appendChild(testRow);
   // Patch speakSurprise to add logging (uses same pattern as animal-game.html)
   const origSpeak = window.speakSurprise;
   window.speakSurprise = function(surprise){

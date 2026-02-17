@@ -573,7 +573,9 @@ function popBubble(b){
   // Sound
   if(b.surprise){
     playSparkle();
-    speakSurprise(b.surprise);
+    // Queue speech for touchend (iOS requires touchend/click for speechSynthesis)
+    S._pendingSpeech = b.surprise;
+    speakSurprise(b.surprise); // shows word label; speech may work on desktop
   } else {
     playPop();
   }
@@ -669,10 +671,41 @@ function handleTouch(tx, ty){
 container.addEventListener('touchstart', e => {
   e.preventDefault();
   resumeAudio();
+  S._pendingSpeech = null;
   for(let i=0; i<e.touches.length; i++){
     handleTouch(e.touches[i].clientX, e.touches[i].clientY);
   }
 }, { passive: false });
+
+// iOS: speechSynthesis requires touchend/click, not touchstart
+container.addEventListener('touchend', e => {
+  if(S._pendingSpeech && window.speechSynthesis){
+    const surprise = S._pendingSpeech;
+    S._pendingSpeech = null;
+    let text, lang;
+    if(surprise.emoji && EMOJI_WORDS[surprise.emoji]){ text = EMOJI_WORDS[surprise.emoji]; lang = 'en-US'; }
+    else if(surprise.type === 'dabing'){ text = '大饼'; lang = 'zh-CN'; }
+    else if(surprise.type === 'baba'){ text = 'Daddy'; lang = 'en-US'; }
+    else if(surprise.type === 'mama'){ text = 'Mommy'; lang = 'en-US'; }
+    else if(surprise.type === 'nainai'){ text = '奶奶'; lang = 'zh-CN'; }
+    else if(surprise.type === 'waipo'){ text = '外婆'; lang = 'zh-CN'; }
+    else if(surprise.type === 'cartoon'){
+      if(surprise.name === '汤姆'){ text = 'Tom'; lang = 'en-US'; }
+      else if(surprise.name === '杰瑞'){ text = 'Jerry'; lang = 'en-US'; }
+      else if(surprise.name === '佩奇'){ text = 'Peppa'; lang = 'en-US'; }
+      else { text = surprise.name; lang = 'zh-CN'; }
+    } else if(surprise.type === 'number'){ text = surprise.word; lang = 'en-US'; }
+    else if(surprise.type === 'greeting'){ text = surprise.text; lang = 'en-US'; }
+    if(!text || !S.soundOn) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; u.rate = 0.8; u.pitch = 1.1;
+    const voices = window.speechSynthesis.getVoices();
+    const v = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    if(v) u.voice = v;
+    window.speechSynthesis.speak(u);
+  }
+}, { passive: true });
 
 container.addEventListener('mousedown', e => {
   resumeAudio();
@@ -831,7 +864,7 @@ preloadImages();
 // ===== Speech Debug Panel =====
 (function(){
   const btn = document.createElement('button');
-  btn.id = 'debugToggle'; btn.textContent = 'DBG v8';
+  btn.id = 'debugToggle'; btn.textContent = 'DBG v9';
   document.body.appendChild(btn);
   const panel = document.createElement('div');
   panel.id = 'debugPanel';

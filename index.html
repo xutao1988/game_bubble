@@ -349,14 +349,27 @@ function maybeEncourage(){
   speechSynthesis.speak(u);
 }
 
-// ===== Speak English Word for Emoji =====
-function speakEmojiWord(emoji){
+// ===== Speak Surprise Name =====
+function speakSurprise(surprise){
   if(!S.soundOn || !('speechSynthesis' in window)) return;
-  const word = EMOJI_WORDS[emoji];
-  if(!word) return;
+  let text, lang;
+  if(surprise.emoji && EMOJI_WORDS[surprise.emoji]){
+    text = EMOJI_WORDS[surprise.emoji]; lang = 'en-US';
+  } else if(surprise.type === 'dabing'){
+    text = '大饼'; lang = 'zh-CN';
+  } else if(surprise.type === 'baba'){
+    text = 'Daddy'; lang = 'en-US';
+  } else if(surprise.type === 'mama'){
+    text = 'Mommy'; lang = 'en-US';
+  } else if(surprise.type === 'cartoon'){
+    if(surprise.name === '汤姆'){ text = 'Tom'; lang = 'en-US'; }
+    else if(surprise.name === '杰瑞'){ text = 'Jerry'; lang = 'en-US'; }
+    else { text = surprise.name; lang = 'zh-CN'; }
+  }
+  if(!text) return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(word);
-  u.lang = 'en-US'; u.rate = .75; u.pitch = 1.1; u.volume = .8;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
   speechSynthesis.speak(u);
 }
 
@@ -443,11 +456,7 @@ function popBubble(b){
   // Sound
   if(b.surprise){
     playSparkle();
-    if(b.surprise.emoji && EMOJI_WORDS[b.surprise.emoji]){
-      speakEmojiWord(b.surprise.emoji);
-    } else {
-      maybeEncourage();
-    }
+    speakSurprise(b.surprise);
   } else {
     playPop();
   }

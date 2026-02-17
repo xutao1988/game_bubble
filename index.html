@@ -396,7 +396,7 @@ function createBubble(){
 
   const bubble = {
     id, el, x, y, sizePx, sizeV,
-    speedY: cfg.speedVmin * v, // px per second
+    speedY: cfg.speedVmin * v * rand(.6, 1.6) * ((cfg.maxSize - sizeV) / (cfg.maxSize - cfg.minSize) * .8 + .6), // smaller = faster
     wobblePhase: rand(0, Math.PI*2),
     wobbleFreq: rand(1.5, 2.5),
     wobbleAmp: rand(1.5, 3) * v,

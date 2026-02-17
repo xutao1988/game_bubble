@@ -421,13 +421,12 @@ function speakSurprise(surprise){
     text = surprise.text; lang = 'en-US';
   }
   if(!text) return;
-  // iOS WebKit: cancel() immediately before speak() causes silence; use short delay
-  speechSynthesis.cancel();
-  setTimeout(() => {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
-    speechSynthesis.speak(u);
-  }, 80);
+  // iOS: speak() MUST stay in synchronous user-gesture call chain
+  // cancel + speak synchronously in same handler works; setTimeout breaks gesture context
+  if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang; u.rate = .75; u.pitch = 1.1; u.volume = .8;
+  speechSynthesis.speak(u);
 }
 
 // ===== Surprise System =====
